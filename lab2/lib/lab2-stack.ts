@@ -4,6 +4,8 @@ import * as redshift from 'aws-cdk-lib/aws-redshiftserverless';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 
 export class Lab2Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -94,6 +96,20 @@ export class Lab2Stack extends cdk.Stack {
     new cdk.CfnOutput(this, 'RedshiftServerlessS3RoleArn', {
       value: redshiftS3Role.roleArn,
       description: 'The ARN of the IAM role with S3 full access for Redshift Serverless',
+    });
+
+    // Create the S3 bucket for Airflow DAGs
+    const dagsBucket = new s3.Bucket(this, 'NLAirflowDagsKiquetal', {
+      bucketName: 'nl-airflow-dags-kiquetal',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
+    // Deploy requirements.txt to the bucket
+    new s3deploy.BucketDeployment(this, 'DeployRequirements', {
+      sources: [s3deploy.Source.asset('./requirements.txt')],
+      destinationBucket: dagsBucket,
+      destinationKeyPrefix: '', // root of the bucket
     });
   }
 }
