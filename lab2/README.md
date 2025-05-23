@@ -1,3 +1,33 @@
+# Ultimate AWS Data Engineering Book - Lab 2 Index
+
+## Project Structure
+
+- **bin/**
+  - `lab2.ts`: CDK app entry point.
+- **lib/**
+  - `lab2-stack.ts`: Main CDK stack definition, including Redshift Serverless resources.
+- **test/**
+  - `lab2.test.ts`: Jest unit tests for the stack.
+- **cdk.json**: CDK configuration file.
+- **package.json**: Project dependencies and scripts.
+- **tsconfig.json**: TypeScript configuration.
+- **README.md**: Project documentation (this file).
+
+## Lab 2 Content Index
+
+1. **Redshift Serverless Implementation**
+   - Namespace: 'lab2-namespace' (admin user, 'lab2db' database)
+   - Workgroup: 'lab2-workgroup' (8 RPUs)
+   - Admin password managed in AWS Secrets Manager
+2. **Deployment Instructions**
+   - Build, test, and deploy commands
+   - Environment context usage
+3. **Accessing Redshift Serverless**
+   - How to retrieve admin credentials
+   - Connection details
+
+---
+
 # Welcome to your CDK TypeScript project
 
 This is a project for CDK development with TypeScript that includes a Redshift Serverless implementation.
