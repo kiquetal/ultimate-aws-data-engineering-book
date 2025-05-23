@@ -4,6 +4,9 @@ import { Lab2Stack } from '../lib/lab2-stack';
 
 const app = new cdk.App();
 
+// Add project tag to all resources
+cdk.Tags.of(app).add('Project', 'ultimate-bootcamp-data-engineering');
+
 // Determine environment from context or environment variable
 const deployEnv = app.node.tryGetContext('env') || process.env.DEPLOY_ENV || 'default';
 
@@ -25,4 +28,3 @@ if (deployEnv === 'prod') {
     /* Add any default-specific props here */
   });
 }
-
