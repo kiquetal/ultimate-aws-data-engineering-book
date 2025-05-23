@@ -53,8 +53,7 @@ export class Lab2Stack extends cdk.Stack {
       baseCapacity: 8, // RPUs (Redshift Processing Units)
       enhancedVpcRouting: false,
       publiclyAccessible: false,
-      securityGroupIds: [], // Optional: specify security group IDs if needed
-      subnetIds: [], // Optional: specify subnet IDs if needed
+
       tags: [
         {
           key: 'Environment',
