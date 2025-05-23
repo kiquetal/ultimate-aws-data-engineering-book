@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import * as redshift from 'aws-cdk-lib/aws-redshiftserverless';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
 export class Lab2Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -28,6 +29,14 @@ export class Lab2Stack extends cdk.Stack {
       ],
       roleName: 'Lab2RedshiftServerlessS3Role',
     });
+
+    // Create a security group for Redshift Serverless
+    const redshiftSecurityGroup = new ec2.SecurityGroup(this, 'RedshiftServerlessSecurityGroup', {
+      vpc: ec2.Vpc.fromLookup(this, 'DefaultVpc', { isDefault: true }),
+      description: 'Security group for Redshift Serverless allowing port 5432',
+      allowAllOutbound: true,
+    });
+    redshiftSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(5432), 'Allow Redshift access on port 5432');
 
     // Create a Redshift Serverless namespace
     const namespace = new redshift.CfnNamespace(this, 'RedshiftServerlessNamespace', {
