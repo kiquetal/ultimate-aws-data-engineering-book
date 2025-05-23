@@ -8,6 +8,7 @@ const app = new cdk.App();
 const deployEnv = app.node.tryGetContext('env') || process.env.DEPLOY_ENV || 'default';
 
 if (deployEnv === 'prod') {
+  console.log('Deploying to production environment');
   new Lab2Stack(app, 'Lab2ProdStack', {
     env: {
       account: process.env.CDK_DEFAULT_ACCOUNT,
