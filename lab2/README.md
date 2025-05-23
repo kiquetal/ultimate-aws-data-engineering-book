@@ -1,3 +1,16 @@
+# Ultimate AWS Data Engineering Book - Lab 2
+
+## Index
+
+1. [Project Structure](#project-structure)
+2. [Lab 2 Content Index](#lab-2-content-index)
+3. [Redshift Serverless Implementation](#redshift-serverless-implementation)
+4. [Accessing Redshift Serverless](#accessing-redshift-serverless)
+5. [Useful Commands](#useful-commands)
+6. [Deploying with Environment Context](#deploying-with-environment-context)
+
+---
+
 # Ultimate AWS Data Engineering Book - Lab 2 Index
 
 ## Project Structure
