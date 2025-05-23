@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as redshift from 'aws-cdk-lib/aws-redshift-serverless';
+import * as redshift from 'aws-cdk-lib/aws-redshiftserverless';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
 
@@ -33,7 +33,7 @@ export class Lab2Stack extends cdk.Stack {
     const namespace = new redshift.CfnNamespace(this, 'RedshiftServerlessNamespace', {
       namespaceName: 'lab2-namespace',
       adminUsername: 'admin',
-      adminUserPassword: adminUserSecret.secretValueFromJson('password').toString(),
+      adminUserPassword: adminUserSecret.secretValueFromJson('password').unsafeUnwrap(),
       dbName: 'lab2db',
       defaultIamRoleArn: redshiftS3Role.roleArn,
       iamRoles: [redshiftS3Role.roleArn],
