@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as redshift from 'aws-cdk-lib/aws-redshift-serverless';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 export class Lab2Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -19,15 +20,24 @@ export class Lab2Stack extends cdk.Stack {
       },
     });
 
+    // Create an IAM role for Redshift Serverless with S3 full access
+    const redshiftS3Role = new iam.Role(this, 'RedshiftServerlessS3Role', {
+      assumedBy: new iam.ServicePrincipal('redshift-serverless.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'),
+      ],
+      roleName: 'Lab2RedshiftServerlessS3Role',
+    });
+
     // Create a Redshift Serverless namespace
     const namespace = new redshift.CfnNamespace(this, 'RedshiftServerlessNamespace', {
       namespaceName: 'lab2-namespace',
       adminUsername: 'admin',
       adminUserPassword: adminUserSecret.secretValueFromJson('password').toString(),
       dbName: 'lab2db',
-      defaultIamRoleArn: undefined, // Optional: specify an IAM role ARN if needed
-      iamRoles: [], // Optional: specify additional IAM roles if needed
-      logExports: ['userlog', 'connectionlog', 'useractivitylog'], // Optional: specify log exports if needed
+      defaultIamRoleArn: redshiftS3Role.roleArn,
+      iamRoles: [redshiftS3Role.roleArn],
+      logExports: ['userlog', 'connectionlog', 'useractivitylog'],
       tags: [
         {
           key: 'Environment',
@@ -70,6 +80,12 @@ export class Lab2Stack extends cdk.Stack {
     new cdk.CfnOutput(this, 'RedshiftServerlessSecretArn', {
       value: adminUserSecret.secretArn,
       description: 'The ARN of the secret containing the Redshift Serverless admin user credentials',
+    });
+
+    // Output the IAM role ARN
+    new cdk.CfnOutput(this, 'RedshiftServerlessS3RoleArn', {
+      value: redshiftS3Role.roleArn,
+      description: 'The ARN of the IAM role with S3 full access for Redshift Serverless',
     });
   }
 }
