@@ -109,7 +109,7 @@ export class Lab2Stack extends cdk.Stack {
     new s3deploy.BucketDeployment(this, 'DeployRequirements', {
       sources: [s3deploy.Source.asset('./requirements.txt')],
       destinationBucket: dagsBucket,
-      destinationKeyPrefix: '', // root of the bucket
+      destinationKeyPrefix: 'requirements', // root of the bucket
     });
   }
 }
