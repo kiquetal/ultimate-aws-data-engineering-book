@@ -6,7 +6,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
-
+import * as mwaa from 'aws-cdk-lib/aws-mwaa'
 export class Lab2Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -110,6 +110,38 @@ export class Lab2Stack extends cdk.Stack {
       sources: [s3deploy.Source.asset('./assets')], // Use the directory containing requirements.txt
       destinationBucket: dagsBucket,
       destinationKeyPrefix: 'requirements', // root of the bucket
+    });
+
+    // create a mwaa
+    const mwaa = new mwaa.CfnEnvironment(this, 'MWAAEnvironment', {
+              name: 'lab2-mwaa',
+        environmentClass: 'mw1.small',
+        sourceBucketArn: dagsBucket.bucketArn,
+        requirementsS3Path : 'requirements/requirements.txt',
+        dagS3Path: 'dags',
+        webserverAccessMode: 'PUBLIC_ONLY',
+        loggingConfiguration: {
+            dagProcessingLogs: {
+            enabled: true,
+            logLevel: 'INFO',
+            },
+            schedulerLogs: {
+            enabled: true,
+            logLevel: 'INFO',
+            },
+            taskLogs: {
+            enabled: true,
+            logLevel: 'INFO',
+            },
+            webserverLogs: {
+            enabled: true,
+            logLevel: 'INFO',
+            },
+            workerLogs: {
+            enabled: true,
+            logLevel: 'INFO',
+            },
+        },
     });
   }
 }
