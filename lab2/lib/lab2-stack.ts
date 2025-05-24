@@ -112,36 +112,51 @@ export class Lab2Stack extends cdk.Stack {
       destinationKeyPrefix: 'requirements', // root of the bucket
     });
 
+    // Create an execution role for MWAA
+    const mwaaExecutionRole = new iam.Role(this, 'MWAAExecutionRole', {
+      assumedBy: new iam.ServicePrincipal('airflow.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonMWAAWebServerAccess'),
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'),
+        iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess'),
+      ],
+      roleName: 'Lab2MWAAExecutionRole',
+    });
+
     // create a mwaa
-    const mwaa = new mwaa.CfnEnvironment(this, 'MWAAEnvironment', {
-              name: 'lab2-mwaa',
-        environmentClass: 'mw1.small',
-        sourceBucketArn: dagsBucket.bucketArn,
-        requirementsS3Path : 'requirements/requirements.txt',
-        dagS3Path: 'dags',
-        webserverAccessMode: 'PUBLIC_ONLY',
-        loggingConfiguration: {
-            dagProcessingLogs: {
-            enabled: true,
-            logLevel: 'INFO',
-            },
-            schedulerLogs: {
-            enabled: true,
-            logLevel: 'INFO',
-            },
-            taskLogs: {
-            enabled: true,
-            logLevel: 'INFO',
-            },
-            webserverLogs: {
-            enabled: true,
-            logLevel: 'INFO',
-            },
-            workerLogs: {
-            enabled: true,
-            logLevel: 'INFO',
-            },
+    const mwaaC = new mwaa.CfnEnvironment(this, 'MWAAEnvironment', {
+      name: 'lab2-mwaa',
+      environmentClass: 'mw1.small',
+      sourceBucketArn: dagsBucket.bucketArn,
+      requirementsS3Path : 'requirements/requirements.txt',
+      dagS3Path: 'dags',
+      maxWorkers: 3,
+      maxWebservers: 2,
+      minWorkers:1,
+      webserverAccessMode: 'PUBLIC_ONLY',
+      executionRoleArn: mwaaExecutionRole.roleArn,
+      loggingConfiguration: {
+        dagProcessingLogs: {
+          enabled: true,
+          logLevel: 'INFO',
         },
+        schedulerLogs: {
+          enabled: true,
+          logLevel: 'INFO',
+        },
+        taskLogs: {
+          enabled: true,
+          logLevel: 'INFO',
+        },
+        webserverLogs: {
+          enabled: true,
+          logLevel: 'INFO',
+        },
+        workerLogs: {
+          enabled: true,
+          logLevel: 'INFO',
+        },
+      },
     });
   }
 }
