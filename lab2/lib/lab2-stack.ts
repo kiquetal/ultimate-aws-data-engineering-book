@@ -107,7 +107,7 @@ export class Lab2Stack extends cdk.Stack {
 
     // Deploy requirements.txt to the bucket
     new s3deploy.BucketDeployment(this, 'DeployRequirements', {
-      sources: [s3deploy.Source.asset('./requirements.txt')],
+      sources: [s3deploy.Source.asset('./assets')], // Use the directory containing requirements.txt
       destinationBucket: dagsBucket,
       destinationKeyPrefix: 'requirements', // root of the bucket
     });
