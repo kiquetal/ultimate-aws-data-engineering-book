@@ -112,15 +112,34 @@ export class Lab2Stack extends cdk.Stack {
       destinationKeyPrefix: 'requirements', // root of the bucket
     });
 
+    // Create a custom policy for MWAA web login token
+    const mwaaWebLoginPolicy = new iam.Policy(this, 'MWAAWebLoginPolicy', {
+      policyName: 'Lab2MWAAWebLoginPolicy',
+      statements: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['airflow:CreateWebLoginToken'],
+          resources: ['arn:aws:airflow:*:*:role/*/*'], // Allow for every airflow role in every environment
+        }),
+      ],
+    });
+
     // Create an execution role for MWAA
     const mwaaExecutionRole = new iam.Role(this, 'MWAAExecutionRole', {
       assumedBy: new iam.ServicePrincipal('airflow.amazonaws.com'),
       managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonMWAAWebServerAccess'),
         iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'),
         iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess'),
       ],
       roleName: 'Lab2MWAAExecutionRole',
+    });
+    mwaaWebLoginPolicy.attachToRole(mwaaExecutionRole);
+
+    // Create a security group specifically for MWAA
+    const mwaaSecurityGroup = new ec2.SecurityGroup(this, 'MWAASecurityGroup', {
+      vpc: ec2.Vpc.fromLookup(this, 'DefaultVpcForMWAA', { isDefault: true }),
+      description: 'Security group for MWAA environment',
+      allowAllOutbound: true,
     });
 
     // create a mwaa
@@ -130,6 +149,10 @@ export class Lab2Stack extends cdk.Stack {
       sourceBucketArn: dagsBucket.bucketArn,
       requirementsS3Path : 'requirements/requirements.txt',
       dagS3Path: 'dags',
+      networkConfiguration: {
+        securityGroupIds: [mwaaSecurityGroup.securityGroupId],
+        subnetIds: ec2.Vpc.fromLookup(this, 'DefaultNVpc2', { isDefault: true }).selectSubnets({ subnetType: ec2.SubnetType.PUBLIC }).subnetIds,
+      },
       maxWorkers: 3,
       maxWebservers: 2,
       minWorkers:1,
