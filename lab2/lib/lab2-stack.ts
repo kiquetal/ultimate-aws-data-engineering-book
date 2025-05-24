@@ -151,7 +151,8 @@ export class Lab2Stack extends cdk.Stack {
       dagS3Path: 'dags',
       networkConfiguration: {
         securityGroupIds: [mwaaSecurityGroup.securityGroupId],
-        subnetIds: ec2.Vpc.fromLookup(this, 'DefaultNVpc2', { isDefault: true }).selectSubnets({ subnetType: ec2.SubnetType.PUBLIC }).subnetIds,
+        subnetIds: ec2.Vpc.fromLookup(this, 'DefaultNVpc2', { isDefault: true })
+          .selectSubnets({ subnetType: ec2.SubnetType.PUBLIC }).subnetIds.slice(0, 2),
       },
       maxWorkers: 3,
       maxWebservers: 2,
