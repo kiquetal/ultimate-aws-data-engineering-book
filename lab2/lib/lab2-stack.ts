@@ -142,6 +142,17 @@ export class Lab2Stack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
+    // Lookup the default VPC (used for MWAA)
+    const mwaaVpc = ec2.Vpc.fromLookup(this, 'MWAAVpc', { isDefault: true });
+
+    // Create a VPC endpoint for S3 (Gateway endpoint, required for MWAA private networking)
+    const mwaaS3Endpoint = new ec2.CfnVPCEndpoint(this, 'MWAAS3Endpoint', {
+      vpcId: mwaaVpc.vpcId,
+      serviceName: `com.amazonaws.${cdk.Stack.of(this).region}.s3`,
+      routeTableIds: mwaaVpc.privateSubnets.map(subnet => subnet.routeTable.routeTableId),
+      vpcEndpointType: 'Gateway',
+    });
+
     // create a mwaa
     const mwaaC = new mwaa.CfnEnvironment(this, 'MWAAEnvironment', {
       name: 'lab2-mwaa',
@@ -151,8 +162,7 @@ export class Lab2Stack extends cdk.Stack {
       dagS3Path: 'dags',
       networkConfiguration: {
         securityGroupIds: [mwaaSecurityGroup.securityGroupId],
-        subnetIds: ec2.Vpc.fromLookup(this, 'DefaultNVpc2', { isDefault: true })
-          .selectSubnets({ subnetType: ec2.SubnetType.PUBLIC }).subnetIds.slice(0, 2),
+        subnetIds: ['subnet-1398f35a', 'subnet-2dec5076'],
       },
       maxWorkers: 3,
       maxWebservers: 2,
