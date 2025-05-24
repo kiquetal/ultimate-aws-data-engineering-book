@@ -149,9 +149,38 @@ export class Lab2Stack extends cdk.Stack {
     const mwaaS3Endpoint = new ec2.CfnVPCEndpoint(this, 'MWAAS3Endpoint', {
       vpcId: mwaaVpc.vpcId,
       serviceName: `com.amazonaws.${cdk.Stack.of(this).region}.s3`,
-      routeTableIds: mwaaVpc.privateSubnets.map(subnet => subnet.routeTable.routeTableId),
+      routeTableIds: ["rtb-0dfed0011b5739620"],
       vpcEndpointType: 'Gateway',
+      policyDocument: {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: '*',
+            Action: 's3:*',
+            Resource: '*',
+          },
+        ],
+      },
     });
+
+    // Create required VPC endpoints for MWAA (Interface endpoints)
+    const mwaaInterfaceEndpointServices = [
+      'com.amazonaws.' + cdk.Stack.of(this).region + '.monitoring',
+      'com.amazonaws.' + cdk.Stack.of(this).region + '.logs',
+      'com.amazonaws.' + cdk.Stack.of(this).region + '.sqs',
+      'com.amazonaws.' + cdk.Stack.of(this).region + '.kms',
+    ];
+    for (const service of mwaaInterfaceEndpointServices) {
+      new ec2.CfnVPCEndpoint(this, `MWAAEndpoint${service.split('.').pop()}`, {
+        vpcId: mwaaVpc.vpcId,
+        serviceName: service,
+        subnetIds: ['subnet-1398f35a', 'subnet-2dec5076'],
+        securityGroupIds: [mwaaSecurityGroup.securityGroupId],
+        vpcEndpointType: 'Interface',
+        privateDnsEnabled: true,
+      });
+    }
 
     // create a mwaa
     const mwaaC = new mwaa.CfnEnvironment(this, 'MWAAEnvironment', {
