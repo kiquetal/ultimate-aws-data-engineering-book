@@ -126,7 +126,7 @@ export class Lab2Stack extends cdk.Stack {
 
     // Create an execution role for MWAA
     const mwaaExecutionRole = new iam.Role(this, 'MWAAExecutionRole', {
-      assumedBy: new iam.ServicePrincipal('airflow.amazonaws.com'),
+      assumedBy: new iam.ServicePrincipal('airflow-env.amazonaws.com'),
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'),
         iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess'),
