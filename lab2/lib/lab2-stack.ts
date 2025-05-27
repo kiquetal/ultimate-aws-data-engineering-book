@@ -6,7 +6,8 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
-import * as mwaa from 'aws-cdk-lib/aws-mwaa'
+import { MwaaConstruct } from './mwaa-construct';
+
 export class Lab2Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -112,114 +113,17 @@ export class Lab2Stack extends cdk.Stack {
       destinationKeyPrefix: 'requirements', // root of the bucket
     });
 
-    // Create a custom policy for MWAA web login token
-    const mwaaWebLoginPolicy = new iam.Policy(this, 'MWAAWebLoginPolicy', {
-      policyName: 'Lab2MWAAWebLoginPolicy',
-      statements: [
-        new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: ['airflow:CreateWebLoginToken'],
-          resources: ['arn:aws:airflow:*:*:role/*/*'], // Allow for every airflow role in every environment
-        }),
-      ],
-    });
-
-    // Create an execution role for MWAA
-    const mwaaExecutionRole = new iam.Role(this, 'MWAAExecutionRole', {
-      assumedBy: new iam.ServicePrincipal('airflow-env.amazonaws.com'),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess'),
-      ],
-      roleName: 'Lab2MWAAExecutionRole',
-    });
-    mwaaWebLoginPolicy.attachToRole(mwaaExecutionRole);
-
-    // Create a security group specifically for MWAA
-    const mwaaSecurityGroup = new ec2.SecurityGroup(this, 'MWAASecurityGroup', {
-      vpc: ec2.Vpc.fromLookup(this, 'DefaultVpcForMWAA', { isDefault: true }),
-      description: 'Security group for MWAA environment',
-      allowAllOutbound: true,
-    });
-
     // Lookup the default VPC (used for MWAA)
     const mwaaVpc = ec2.Vpc.fromLookup(this, 'MWAAVpc', { isDefault: true });
 
-    // Create a VPC endpoint for S3 (Gateway endpoint, required for MWAA private networking)
-    const mwaaS3Endpoint = new ec2.CfnVPCEndpoint(this, 'MWAAS3Endpoint', {
-      vpcId: mwaaVpc.vpcId,
-      serviceName: `com.amazonaws.${cdk.Stack.of(this).region}.s3`,
-      routeTableIds: ["rtb-0dfed0011b5739620"],
-      vpcEndpointType: 'Gateway',
-      policyDocument: {
-        Version: '2012-10-17',
-        Statement: [
-          {
-            Effect: 'Allow',
-            Principal: '*',
-            Action: 's3:*',
-            Resource: '*',
-          },
-        ],
-      },
+    // Instantiate the MWAA construct
+    if (toCreateMwaaConstruct) {
+    new MwaaConstruct(this, 'MwaaConstruct', {
+      vpc: mwaaVpc,
+      dagsBucket: dagsBucket,
     });
 
-    // Create required VPC endpoints for MWAA (Interface endpoints)
-    const mwaaInterfaceEndpointServices = [
-      'com.amazonaws.' + cdk.Stack.of(this).region + '.monitoring',
-      'com.amazonaws.' + cdk.Stack.of(this).region + '.logs',
-      'com.amazonaws.' + cdk.Stack.of(this).region + '.sqs',
-      'com.amazonaws.' + cdk.Stack.of(this).region + '.kms',
-    ];
-    for (const service of mwaaInterfaceEndpointServices) {
-      new ec2.CfnVPCEndpoint(this, `MWAAEndpoint${service.split('.').pop()}`, {
-        vpcId: mwaaVpc.vpcId,
-        serviceName: service,
-        subnetIds: ['subnet-1398f35a', 'subnet-2dec5076'],
-        securityGroupIds: [mwaaSecurityGroup.securityGroupId],
-        vpcEndpointType: 'Interface',
-        privateDnsEnabled: true,
-      });
+  } else {
+        console.warn('MWAA construct creation skipped. Set toCreateMwaaConstruct to true to create it.');
     }
-
-    // create a mwaa
-    const mwaaC = new mwaa.CfnEnvironment(this, 'MWAAEnvironment', {
-      name: 'lab2-mwaa',
-      environmentClass: 'mw1.small',
-      sourceBucketArn: dagsBucket.bucketArn,
-      requirementsS3Path : 'requirements/requirements.txt',
-      dagS3Path: 'dags',
-      networkConfiguration: {
-        securityGroupIds: [mwaaSecurityGroup.securityGroupId],
-        subnetIds: ['subnet-1398f35a', 'subnet-2dec5076'],
-      },
-      maxWorkers: 3,
-      maxWebservers: 2,
-      minWorkers:1,
-      webserverAccessMode: 'PUBLIC_ONLY',
-      executionRoleArn: mwaaExecutionRole.roleArn,
-      loggingConfiguration: {
-        dagProcessingLogs: {
-          enabled: true,
-          logLevel: 'INFO',
-        },
-        schedulerLogs: {
-          enabled: true,
-          logLevel: 'INFO',
-        },
-        taskLogs: {
-          enabled: true,
-          logLevel: 'INFO',
-        },
-        webserverLogs: {
-          enabled: true,
-          logLevel: 'INFO',
-        },
-        workerLogs: {
-          enabled: true,
-          logLevel: 'INFO',
-        },
-      },
-    });
-  }
 }
