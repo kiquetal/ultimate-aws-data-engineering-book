@@ -109,12 +109,6 @@ export class Lab2Stack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    // Deploy requirements.txt to the bucket
-    new s3deploy.BucketDeployment(this, 'DeployRequirements', {
-      sources: [s3deploy.Source.asset('./assets')], // Use the directory containing requirements.txt
-      destinationBucket: dagsBucket,
-      destinationKeyPrefix: 'requirements', // root of the bucket
-    });
 
     // Lookup the default VPC (used for MWAA)
     const mwaaVpc = ec2.Vpc.fromLookup(this, 'MWAAVpc', { isDefault: true });
