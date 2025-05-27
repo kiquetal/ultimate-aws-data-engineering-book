@@ -40,7 +40,13 @@ export class RedshiftSchemaConstruct extends Construct {
       timeout: cdk.Duration.minutes(15),
       memorySize: 256,
       environment: {
-        PYTHONPATH: '/var/task'
+        PYTHONPATH: '/var/task',
+        WORKGROUP_NAME: props.workgroupName,
+        DATABASE_NAME: props.databaseName,
+        ADMIN_SECRET_ARN: props.adminSecretArn,
+        S3_BUCKET_NAME: sqlBucket.bucketName,
+        S3_KEY_PREFIX: 'redshift-sql',
+        SQL_FILE_NAME: 'redshift-tables.sql',
       }
     });
 
@@ -64,24 +70,5 @@ export class RedshiftSchemaConstruct extends Construct {
       ],
       resources: [props.adminSecretArn]
     }));
-
-    // Create a custom resource provider that uses the Lambda function
-    const provider = new cr.Provider(this, 'RedshiftSchemaProvider', {
-      onEventHandler: redshiftSchemaLambda,
-      logRetention: cdk.aws_logs.RetentionDays.ONE_WEEK
-    });
-
-    // Create a custom resource that uses the provider
-    new cdk.CustomResource(this, 'RunRedshiftSchemaSql', {
-      serviceToken: provider.serviceToken,
-      properties: {
-        workgroupName: props.workgroupName,
-        databaseName: props.databaseName,
-        adminSecretArn: props.adminSecretArn,
-        s3BucketName: sqlBucket.bucketName,
-        s3KeyPrefix: 'redshift-sql',
-        sqlFileName: 'redshift-tables.sql'
-      }
-    });
   }
 }
