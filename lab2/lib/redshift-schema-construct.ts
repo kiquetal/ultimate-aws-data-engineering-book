@@ -13,21 +13,17 @@ export interface RedshiftSchemaProps {
   databaseName: string;
   adminSecretArn: string;
   sqlAssetPath: string;
+  sqlBucket: s3.IBucket;
 }
 
 export class RedshiftSchemaConstruct extends Construct {
   constructor(scope: Construct, id: string, props: RedshiftSchemaProps) {
     super(scope, id);
 
-    // Upload the SQL file to an S3 bucket
-    const sqlBucket = new s3.Bucket(this, 'RedshiftSchemaSqlBucket', {
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
-    });
-
+    // Deploy the SQL file to the provided S3 bucket
     new s3deploy.BucketDeployment(this, 'DeployRedshiftSchemaSql', {
       sources: [s3deploy.Source.asset(path.dirname(props.sqlAssetPath))],
-      destinationBucket: sqlBucket,
+      destinationBucket: props.sqlBucket,
       destinationKeyPrefix: 'redshift-sql',
       prune: false,
     });
@@ -36,7 +32,15 @@ export class RedshiftSchemaConstruct extends Construct {
     const redshiftSchemaLambda = new lambda.Function(this, 'RedshiftSchemaLambda', {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: 'redshift_schema_lambda.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../assets')),
+      code: lambda.Code.fromAsset(path.join(__dirname, '../assets'), {
+        bundling: {
+          image: lambda.Runtime.PYTHON_3_9.bundlingImage,
+          command: [
+            'bash', '-c',
+            'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+          ],
+        },
+      }),
       timeout: cdk.Duration.minutes(15),
       memorySize: 256,
       environment: {
@@ -44,7 +48,7 @@ export class RedshiftSchemaConstruct extends Construct {
         WORKGROUP_NAME: props.workgroupName,
         DATABASE_NAME: props.databaseName,
         ADMIN_SECRET_ARN: props.adminSecretArn,
-        S3_BUCKET_NAME: sqlBucket.bucketName,
+        S3_BUCKET_NAME: props.sqlBucket.bucketName,
         S3_KEY_PREFIX: 'redshift-sql',
         SQL_FILE_NAME: 'redshift-tables.sql',
       }
@@ -61,7 +65,7 @@ export class RedshiftSchemaConstruct extends Construct {
     }));
 
     // Grant the Lambda function permissions to read from the S3 bucket
-    sqlBucket.grantRead(redshiftSchemaLambda);
+    props.sqlBucket.grantRead(redshiftSchemaLambda);
 
     // Grant the Lambda function permissions to use the Redshift admin secret
     redshiftSchemaLambda.addToRolePolicy(new iam.PolicyStatement({
