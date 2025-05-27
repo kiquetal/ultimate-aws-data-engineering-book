@@ -3,12 +3,13 @@ import os
 import json
 import io
 import botocore
+import re
 
 def handler(event, context):
     """
     Lambda function to execute SQL statements from a file in S3 on Redshift.
     Uses environment variables for configuration.
-    Reads the SQL file from S3 and sends its contents as the SQL statement.
+    Reads the SQL file from S3, splits into statements, and executes each one.
     """
     try:
         # Extract parameters from environment variables
@@ -25,28 +26,30 @@ def handler(event, context):
         sql_obj = s3.get_object(Bucket=s3_bucket_name, Key=sql_key)
         sql_content = sql_obj['Body'].read().decode('utf-8')
 
+        # Split SQL content into individual statements (naive split on semicolon)
+        statements = [stmt.strip() for stmt in re.split(r';\s*', sql_content) if stmt.strip() and not stmt.strip().startswith('--')]
+
         # Initialize Redshift Data API client
         redshift_data = boto3.client('redshift-data')
+        execution_ids = []
+        for stmt in statements:
+            response = redshift_data.execute_statement(
+                WorkgroupName=workgroup_name,
+                Database=database_name,
+                SecretArn=admin_secret_arn,
+                Sql=stmt
+            )
+            execution_ids.append(response['Id'])
 
-        # Execute the SQL content
-        response = redshift_data.execute_statement(
-            WorkgroupName=workgroup_name,
-            Database=database_name,
-            SecretArn=admin_secret_arn,
-            Sql=sql_content
-        )
-
-        # Return the execution ID for tracking
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'SQL execution started successfully',
-                'executionId': response['Id']
+                'message': 'SQL execution started for all statements',
+                'executionIds': execution_ids
             })
         }
 
     except Exception as e:
-        # Log the error and return a failure response
         print(f"Error executing SQL: {str(e)}")
         return {
             'statusCode': 500,

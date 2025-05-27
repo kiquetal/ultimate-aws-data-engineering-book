@@ -127,7 +127,7 @@ export class Lab2Stack extends cdk.Stack {
     // Instantiate the RedshiftSchemaConstruct
     new RedshiftSchemaConstruct(this, 'RedshiftSchemaConstruct', {
       workgroupName: workgroup.workgroupName,
-      databaseName: namespace.dbName || 'lab2db',
+      databaseName: 'songs_db', // Set to the target DB for schema/tables
       adminSecretArn: adminUserSecret.secretArn,
       sqlAssetPath: path.join(__dirname, '../redshift-sql/redshift-tables.sql'),
       sqlBucket: dagsBucket,
