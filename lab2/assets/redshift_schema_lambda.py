@@ -1,9 +1,28 @@
 import boto3
 import os
 import json
-import io
-import botocore
 import re
+
+def split_sql_statements(sql):
+    # Naive split on semicolon, but ignore semicolons in single/double quotes
+    statements = []
+    statement = ''
+    in_single_quote = False
+    in_double_quote = False
+    for char in sql:
+        if char == "'":
+            in_single_quote = not in_single_quote if not in_double_quote else in_single_quote
+        elif char == '"':
+            in_double_quote = not in_double_quote if not in_single_quote else in_double_quote
+        if char == ';' and not in_single_quote and not in_double_quote:
+            if statement.strip():
+                statements.append(statement.strip())
+            statement = ''
+        else:
+            statement += char
+    if statement.strip():
+        statements.append(statement.strip())
+    return statements
 
 def handler(event, context):
     """
@@ -26,26 +45,40 @@ def handler(event, context):
         sql_obj = s3.get_object(Bucket=s3_bucket_name, Key=sql_key)
         sql_content = sql_obj['Body'].read().decode('utf-8')
 
-        # Split SQL content into individual statements (naive split on semicolon)
-        statements = [stmt.strip() for stmt in re.split(r';\s*', sql_content) if stmt.strip() and not stmt.strip().startswith('--')]
+        # Remove comments
+        sql_content = re.sub(r'--.*', '', sql_content)
+        # Split into statements
+        statements = split_sql_statements(sql_content)
 
         # Initialize Redshift Data API client
         redshift_data = boto3.client('redshift-data')
         execution_ids = []
+        errors = []
         for stmt in statements:
-            response = redshift_data.execute_statement(
-                WorkgroupName=workgroup_name,
-                Database=database_name,
-                SecretArn=admin_secret_arn,
-                Sql=stmt
-            )
-            execution_ids.append(response['Id'])
+            if not stmt.strip():
+                continue
+            try:
+                response = redshift_data.execute_statement(
+                    WorkgroupName=workgroup_name,
+                    Database=database_name,
+                    SecretArn=admin_secret_arn,
+                    Sql=stmt
+                )
+                execution_ids.append({'statement': stmt[:50], 'id': response['Id']})
+            except Exception as e:
+                # Continue on 'already exists' errors, log others
+                msg = str(e)
+                if 'already exists' in msg or 'Duplicate' in msg:
+                    errors.append({'statement': stmt[:50], 'error': msg, 'skipped': True})
+                    continue
+                errors.append({'statement': stmt[:50], 'error': msg, 'skipped': False})
 
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'SQL execution started for all statements',
-                'executionIds': execution_ids
+                'message': 'SQL execution attempted for all statements',
+                'executionIds': execution_ids,
+                'errors': errors
             })
         }
 
