@@ -34,7 +34,7 @@ export class RedshiftSchemaConstruct extends Construct {
       handler: 'redshift_schema_lambda.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../assets'), {
         bundling: {
-          image: lambda.Runtime.PYTHON_3_9.bundlingImage,
+          image: lambda.Runtime.PYTHON_3_12.bundlingImage,
           command: [
             'bash', '-c',
             'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
