@@ -1,11 +1,14 @@
 import boto3
 import os
 import json
+import io
+import botocore
 
 def handler(event, context):
     """
     Lambda function to execute SQL statements from a file in S3 on Redshift.
     Uses environment variables for configuration.
+    Reads the SQL file from S3 and sends its contents as the SQL statement.
     """
     try:
         # Extract parameters from environment variables
@@ -16,18 +19,21 @@ def handler(event, context):
         s3_key_prefix = os.environ['S3_KEY_PREFIX']
         sql_file_name = os.environ['SQL_FILE_NAME']
 
+        # Read SQL file from S3
+        s3 = boto3.client('s3')
+        sql_key = f"{s3_key_prefix}/{sql_file_name}" if s3_key_prefix else sql_file_name
+        sql_obj = s3.get_object(Bucket=s3_bucket_name, Key=sql_key)
+        sql_content = sql_obj['Body'].read().decode('utf-8')
+
         # Initialize Redshift Data API client
         redshift_data = boto3.client('redshift-data')
 
-        # Construct the SQL command to execute the script from S3
-        sql_command = f"\\set ON_ERROR_STOP on\n\\i s3://{s3_bucket_name}/{s3_key_prefix}/{sql_file_name}"
-
-        # Execute the SQL command
+        # Execute the SQL content
         response = redshift_data.execute_statement(
             WorkgroupName=workgroup_name,
             Database=database_name,
             SecretArn=admin_secret_arn,
-            Sql=sql_command
+            Sql=sql_content
         )
 
         # Return the execution ID for tracking
