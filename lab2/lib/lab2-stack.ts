@@ -7,6 +7,8 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { MwaaConstruct } from './mwaa-construct';
+import { RedshiftSchemaConstruct } from './redshift-schema-construct';
+import * as path from 'path';
 
 export class Lab2Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -127,4 +129,14 @@ export class Lab2Stack extends cdk.Stack {
   } else {
         console.warn('MWAA construct creation skipped. Set toCreateMwaaConstruct to true to create it.');
     }
+
+    // Instantiate the RedshiftSchemaConstruct
+    new RedshiftSchemaConstruct(this, 'RedshiftSchemaConstruct', {
+      workgroupName: workgroup.workgroupName,
+      databaseName: namespace.dbName || 'lab2db',
+      adminSecretArn: adminUserSecret.secretArn,
+      sqlAssetPath: path.join(__dirname, '../redshift-sql/redshift-tables.sql'),
+      sqlBucket: dagsBucket,
+    });
+  }
 }
