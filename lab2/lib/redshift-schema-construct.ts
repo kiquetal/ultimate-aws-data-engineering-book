@@ -30,7 +30,7 @@ export class RedshiftSchemaConstruct extends Construct {
 
     // Create a Lambda function to run the SQL on Redshift
     const redshiftSchemaLambda = new lambda.Function(this, 'RedshiftSchemaLambda', {
-      runtime: lambda.Runtime.PYTHON_3_9,
+      runtime: lambda.Runtime.PYTHON_3_12,
       handler: 'redshift_schema_lambda.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../assets'), {
         bundling: {
