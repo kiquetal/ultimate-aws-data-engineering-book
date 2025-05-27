@@ -2,6 +2,7 @@ import boto3
 import os
 import json
 import re
+import time
 
 def split_sql_statements(sql):
     # Naive split on semicolon, but ignore semicolons in single/double quotes
@@ -54,7 +55,7 @@ def handler(event, context):
         redshift_data = boto3.client('redshift-data')
         execution_ids = []
         errors = []
-        for stmt in statements:
+        for idx, stmt in enumerate(statements):
             if not stmt.strip():
                 continue
             try:
@@ -65,6 +66,18 @@ def handler(event, context):
                     Sql=stmt
                 )
                 execution_ids.append({'statement': stmt[:50], 'id': response['Id']})
+                # Wait for schema creation to finish before creating tables
+                if idx == 0 and 'create schema' in stmt.lower():
+                    statement_id = response['Id']
+                    while True:
+                        desc = redshift_data.describe_statement(Id=statement_id)
+                        status = desc['Status']
+                        if status in ['FINISHED', 'FAILED', 'ABORTED']:
+                            break
+                        time.sleep(1)
+                    if status != 'FINISHED':
+                        errors.append({'statement': stmt[:50], 'error': f'Schema creation failed: {desc.get("Error")}', 'skipped': False})
+                        break
             except Exception as e:
                 # Continue on 'already exists' errors, log others
                 msg = str(e)
