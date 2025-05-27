@@ -1,5 +1,4 @@
-create database songs_db;
-
+-- Removed create database statement. Make sure to set DATABASE_NAME=songs_db in Lambda environment.
 create schema reporting_schema;
 
 CREATE TABLE reporting_schema.genre_level_kpis (
@@ -41,3 +40,4 @@ CREATE TABLE reporting_schema.tmp_hourly_kpis (
     diversity_index FLOAT,
     most_engaged_age_group VARCHAR(255)
 );
+
