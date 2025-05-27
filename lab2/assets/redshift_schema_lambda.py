@@ -5,32 +5,16 @@ import json
 def handler(event, context):
     """
     Lambda function to execute SQL statements from a file in S3 on Redshift.
-
-    Parameters:
-    - event: Contains information about the event that triggered the Lambda function
-    - context: Provides methods and properties about the invocation, function, and execution environment
-
-    Expected event structure:
-    {
-        "workgroupName": "string",
-        "databaseName": "string",
-        "adminSecretArn": "string",
-        "s3BucketName": "string",
-        "s3KeyPrefix": "string",
-        "sqlFileName": "string"
-    }
-
-    Returns:
-    - A dictionary with the execution status and any relevant information
+    Uses environment variables for configuration.
     """
     try:
-        # Extract parameters from the event
-        workgroup_name = event['workgroupName']
-        database_name = event['databaseName']
-        admin_secret_arn = event['adminSecretArn']
-        s3_bucket_name = event['s3BucketName']
-        s3_key_prefix = event['s3KeyPrefix']
-        sql_file_name = event['sqlFileName']
+        # Extract parameters from environment variables
+        workgroup_name = os.environ['WORKGROUP_NAME']
+        database_name = os.environ['DATABASE_NAME']
+        admin_secret_arn = os.environ['ADMIN_SECRET_ARN']
+        s3_bucket_name = os.environ['S3_BUCKET_NAME']
+        s3_key_prefix = os.environ['S3_KEY_PREFIX']
+        sql_file_name = os.environ['SQL_FILE_NAME']
 
         # Initialize Redshift Data API client
         redshift_data = boto3.client('redshift-data')
