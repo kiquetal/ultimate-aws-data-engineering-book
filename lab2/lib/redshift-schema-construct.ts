@@ -28,30 +28,43 @@ export class RedshiftSchemaConstruct extends Construct {
       prune: false,
     });
 
-    // Create a Lambda function to run the SQL on Redshift
-    const redshiftSchemaLambda = new lambda.Function(this, 'RedshiftSchemaLambda', {
-      runtime: lambda.Runtime.PYTHON_3_12,
-      handler: 'redshift_schema_lambda.handler',
+    // Create a Lambda Layer for Python dependencies (excluding boto3/botocore)
+    const redshiftLayer = new lambda.LayerVersion(this, 'RedshiftSchemaLayer', {
       code: lambda.Code.fromAsset(path.join(__dirname, '../assets'), {
         bundling: {
           image: lambda.Runtime.PYTHON_3_12.bundlingImage,
           command: [
             'bash', '-c',
-            'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+            [
+              'pip install -r requirements.txt -t /asset-output/python',
+              'cp -au /asset-input/* /asset-output/python/',
+            ].join(' && ')
           ],
         },
+      }),
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_12],
+      description: 'Layer with Redshift schema dependencies (no boto3/botocore)',
+    });
+
+    // Create a Lambda function to run the SQL on Redshift (code only, no requirements)
+    const redshiftSchemaLambda = new lambda.Function(this, 'RedshiftSchemaLambda', {
+      runtime: lambda.Runtime.PYTHON_3_12,
+      handler: 'redshift_schema_lambda.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../assets'), {
+        exclude: ['requirements.txt'],
       }),
       timeout: cdk.Duration.minutes(15),
       memorySize: 256,
       environment: {
-        PYTHONPATH: '/var/task',
+        PYTHONPATH: '/opt',
         WORKGROUP_NAME: props.workgroupName,
         DATABASE_NAME: props.databaseName,
         ADMIN_SECRET_ARN: props.adminSecretArn,
         S3_BUCKET_NAME: props.sqlBucket.bucketName,
         S3_KEY_PREFIX: 'redshift-sql',
         SQL_FILE_NAME: 'redshift-tables.sql',
-      }
+      },
+      layers: [redshiftLayer],
     });
 
     // Grant the Lambda function permissions to use Redshift Data API
