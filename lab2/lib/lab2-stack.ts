@@ -23,6 +23,7 @@ export class Lab2Stack extends cdk.Stack {
         passwordLength: 16,
       },
     });
+    const toCreateMwaaConstruct = false
 
     // Create an IAM role for Redshift Serverless with S3 full access
     const redshiftS3Role = new iam.Role(this, 'RedshiftServerlessS3Role', {
