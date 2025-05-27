@@ -30,14 +30,14 @@ export class RedshiftSchemaConstruct extends Construct {
 
     // Create a Lambda Layer for Python dependencies (excluding boto3/botocore)
     const redshiftLayer = new lambda.LayerVersion(this, 'RedshiftSchemaLayer', {
-      code: lambda.Code.fromAsset(path.join(__dirname, '../assets'), {
+      code: lambda.Code.fromAsset(path.join(__dirname, '../assets/layers'), {
         bundling: {
           image: lambda.Runtime.PYTHON_3_12.bundlingImage,
           command: [
             'bash', '-c',
             [
               'pip install -r requirements.txt -t /asset-output/python',
-              'cp -au /asset-input/* /asset-output/python/',
+              'cp -au /asset-input/* /asset-output/python/'
             ].join(' && ')
           ],
         },
@@ -51,7 +51,7 @@ export class RedshiftSchemaConstruct extends Construct {
       runtime: lambda.Runtime.PYTHON_3_12,
       handler: 'redshift_schema_lambda.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../assets'), {
-        exclude: ['requirements.txt'],
+        exclude: ['layers/requirements.txt'],
       }),
       timeout: cdk.Duration.minutes(15),
       memorySize: 256,
