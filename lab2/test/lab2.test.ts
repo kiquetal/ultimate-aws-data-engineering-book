@@ -43,4 +43,33 @@ describe('Lab2 Stack', () => {
       },
     });
   });
+
+  test('Redshift Schema Lambda Function Created', () => {
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      Handler: 'redshift_schema_lambda.handler',
+      Runtime: 'python3.9',
+      Timeout: 900, // 15 minutes in seconds
+      Environment: {
+        Variables: {
+          PYTHONPATH: '/var/task'
+        }
+      }
+    });
+  });
+
+  test('Redshift Schema Custom Resource Created', () => {
+    template.hasResourceProperties('AWS::CloudFormation::CustomResource', {
+      ServiceToken: {
+        'Fn::GetAtt': [
+          template.findResources('AWS::Lambda::Function', {
+            Properties: {
+              Handler: 'framework.onEvent',
+              Description: 'AWS CDK resource provider framework - onEvent (MyTestStack/RedshiftSchema/RedshiftSchemaProvider)'
+            }
+          }).getKeys()[0],
+          'Arn'
+        ]
+      }
+    });
+  });
 });
